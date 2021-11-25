@@ -5,8 +5,12 @@ void convert_hex_byte_to_decimal(uint8_t *btc_unsigned_txn_byte_array, const uin
 }
 
 void fillAndUpdate(uint8_t* u_Arr, size_t size, const uint8_t **inp, bool IsLength){
-	for(int i = 0; i < size; i++){
+  for(int i = 0; i < size; i++){
 		convert_hex_byte_to_decimal(&u_Arr[i], *inp);
+    if(IsLength && u_Arr[i] <= 0x7f){
+      *u_Arr = 1;
+      return;
+    }
     if(IsLength){
       if(u_Arr[i] >= 0x80 && u_Arr[i] <= 0xb7){
         u_Arr[i] -= 0x80;
@@ -30,7 +34,7 @@ eth_unsigned_txn *unsigned_txn_ptr){
   int length_size = *unsigned_txn_ptr->length_size;
   //printf("\n%d", length_size);
   fillAndUpdate(unsigned_txn_ptr->length, length_size, &eth_unsigned_txn_byte_array,false);
-
+  
   fillAndUpdate(unsigned_txn_ptr->nonce_size, length_size, &eth_unsigned_txn_byte_array, true);
   fillAndUpdate(unsigned_txn_ptr->nonce, *unsigned_txn_ptr->nonce_size, &eth_unsigned_txn_byte_array, false);
 
@@ -47,15 +51,20 @@ eth_unsigned_txn *unsigned_txn_ptr){
   fillAndUpdate(unsigned_txn_ptr->value_size, length_size, &eth_unsigned_txn_byte_array, true);
   fillAndUpdate(unsigned_txn_ptr->value, *unsigned_txn_ptr->value_size, &eth_unsigned_txn_byte_array, false);
   
-  uint8_t *temp = malloc(length_size);
-  unsigned_txn_ptr->payload_size = 0;
-  fillAndUpdate(temp, length_size, &eth_unsigned_txn_byte_array, true);
-  for (int i=0;i<length_size;i++){
-    unsigned_txn_ptr->payload_size <<=8;
-    unsigned_txn_ptr->payload_size |= temp[i];
+  uint8_t ps;
+  convert_hex_byte_to_decimal(&ps, eth_unsigned_txn_byte_array);
+  if(ps > 0x7f){
+    uint8_t *temp = malloc(length_size);
+    unsigned_txn_ptr->payload_size = 0;
+    fillAndUpdate(temp, length_size, &eth_unsigned_txn_byte_array, true);
+    for (int i=0;i<length_size;i++){
+      unsigned_txn_ptr->payload_size <<=8;
+      unsigned_txn_ptr->payload_size |= temp[i];
+    }
+    free(temp);
+  }else{
+    unsigned_txn_ptr->payload_size = 1;
   }
-  free(temp);
-  //printf("%d", unsigned_txn_ptr->payload_size);
 
   unsigned_txn_ptr->payload = malloc(unsigned_txn_ptr->payload_size);
   fillAndUpdate(unsigned_txn_ptr->payload, unsigned_txn_ptr->payload_size, &eth_unsigned_txn_byte_array, false);
@@ -74,10 +83,15 @@ eth_unsigned_txn *unsigned_txn_ptr){
 
 void attachAndUpdate(uint8_t **u_Out, size_t size, uint32_t *len, const uint8_t *u_Inp, bool putlength){
   uint8_t length;
-  if(size >= 0 && size <= 55){
-    length = size + 0x80;
-  }else{
-    length = size + 0xb7;
+  if(size == 1 && *u_Inp <=0x7f){
+    putlength = false;
+  }
+  else{
+    if(size >= 0 && size <= 55){
+      length = size + 0x80;
+    }else{
+     length = size + 0xb7;
+    }
   }
   if(putlength){
     memcpy(*u_Out, &length, 1);
@@ -97,11 +111,6 @@ uint8_t *output, uint32_t *len){
   }else{
     length_size += 0xf7;
   }
-  //output[0] = length_size;
-  //output++;
-  //memcpy(output, unsigned_txn_ptr->length, *unsigned_txn_ptr->length_size);
-  //output+= *unsigned_txn_ptr->length_size;
-  //(*len)++;
   attachAndUpdate(&output, *unsigned_txn_ptr->nonce_size, len, unsigned_txn_ptr->nonce, true);
   attachAndUpdate(&output, *unsigned_txn_ptr->gas_price_size, len, unsigned_txn_ptr->gas_price,true);
   attachAndUpdate(&output, *unsigned_txn_ptr->gas_limit_size, len, unsigned_txn_ptr->gas_limit,true);
@@ -178,12 +187,13 @@ int sig_unsigned_byte_array(const uint8_t *eth_unsigned_txn_byte_array,
       u_chain |= unsigned_txn_ptr->chain_id[i];
     }
     
-    uint8_t v = 35 + u_chain + findParity(&u_Sig[32], 32); //fixed 1 byte
+    uint8_t v = 35 + u_chain*2 + findParity(&u_Sig[32], 32); //fixed 1 byte
+    //printf("\nv = %d\n",v);
     memcpy(sig,eth_unsigned_txn_byte_array, eth_unsigned_txn_len);
     int outputlength = eth_unsigned_txn_len - 2 - *unsigned_txn_ptr->chain_id_size;
     memcpy(&sig[outputlength],&v, 1);
     outputlength++;
-    uint8_t srlen = 32+0x80;
+    uint8_t srlen = 0x20+0x80;
     memcpy(&sig[outputlength], &srlen, 1);
     outputlength++;
     memcpy(&sig[outputlength], &u_Sig, 32);
@@ -195,11 +205,13 @@ int sig_unsigned_byte_array(const uint8_t *eth_unsigned_txn_byte_array,
     *outputlen = outputlength;
     uint8_t finalOut[4096], lengthtemp[4];
     int outtemp = outputlength, i = 0;
+    
     while(outtemp > 0){
       lengthtemp[i] = outtemp & 0xffff;
       outtemp >>= 8;
       i++;
     }
+
     //printf("i  :%d", i);
     int j=0;
     for(j = i-1; j >= 0; j--){
@@ -208,8 +220,9 @@ int sig_unsigned_byte_array(const uint8_t *eth_unsigned_txn_byte_array,
     finalOut[0] = 0xf7 + i;
     memcpy(&finalOut[i+1], sig, outputlength);
     (*outputlen) += i+1;
-    
+
     memset(sig,0x0,*outputlen);
+    //printf("\n output len: %d\n", *outputlen);
     memcpy(sig, finalOut, *outputlen);
     return 0;
 }

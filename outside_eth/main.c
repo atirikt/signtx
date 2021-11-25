@@ -22,10 +22,25 @@ int main(){
     eth_unsigned_txn intermediate={0};
     eth_byte_array_to_unsigned_txn(hex_dump, strlen(hex_dump)/2, &intermediate);
     
-    uint8_t u_Byte[4096];
-    uint32_t len;
-    generate_bytearr_from_unsigned_struct(&intermediate, u_Byte, &len);
+    printf("\n receipient address:  0x");
+    for(int i = 0;i < 20;i++){
+      printf("%.2x", intermediate.to_address[i]);
+    }  
+    printf("\n");
     
+    printf("\n value:  ");
+    uint64_t wei = 0;
+    for(int i = 0; i < *intermediate.value_size; i++){
+      wei <<= 8;
+      wei |= intermediate.value[i];
+    }
+    printf("%llu wei \n", wei);
+    
+
+    uint8_t u_Byte[4096]={0};
+    uint32_t len = 0;
+    generate_bytearr_from_unsigned_struct(&intermediate, u_Byte, &len);
+
     uint8_t u_SigByte[4096] = {0};
     int outlength = 0;
     sig_unsigned_byte_array(u_Byte, len, NULL,mnemonic,"", u_SigByte, &intermediate, &outlength);
