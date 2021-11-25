@@ -28,7 +28,7 @@ eth_unsigned_txn *unsigned_txn_ptr){
     *unsigned_txn_ptr->length_size -= 0xf7;
   }
   int length_size = *unsigned_txn_ptr->length_size;
-  printf("\n%d", length_size);
+  //printf("\n%d", length_size);
   fillAndUpdate(unsigned_txn_ptr->length, length_size, &eth_unsigned_txn_byte_array,false);
 
   fillAndUpdate(unsigned_txn_ptr->nonce_size, length_size, &eth_unsigned_txn_byte_array, true);
@@ -55,7 +55,7 @@ eth_unsigned_txn *unsigned_txn_ptr){
     unsigned_txn_ptr->payload_size |= temp[i];
   }
   free(temp);
-  printf("%d", unsigned_txn_ptr->payload_size);
+  //printf("%d", unsigned_txn_ptr->payload_size);
 
   unsigned_txn_ptr->payload = malloc(unsigned_txn_ptr->payload_size);
   fillAndUpdate(unsigned_txn_ptr->payload, unsigned_txn_ptr->payload_size, &eth_unsigned_txn_byte_array, false);
@@ -162,22 +162,10 @@ int sig_unsigned_byte_array(const uint8_t *eth_unsigned_txn_byte_array,
 			return 3;
 		}
 
-		printf("\n private key:  ");
-		for(int i=0;i < sizeof(z_WalletMeta.private_key); i++){
-			printf("%.2x", z_WalletMeta.private_key[i]);
-		}
-		printf("\n");
 		hdnode_fill_public_key(&z_WalletMeta);
     
     uint8_t u_Digest[32] = {0};
     keccak_256(eth_unsigned_txn_byte_array, eth_unsigned_txn_len,u_Digest);
-
-    printf("\n digest:  ");
-		for(int i=0;i < sizeof(u_Digest); i++){
-			printf("%.2x", u_Digest[i]);
-		}
-		printf("\n");
-		
 
     uint8_t u_Sig[64];
     if(ecdsa_sign_digest(&secp256k1, z_WalletMeta.private_key, u_Digest, u_Sig,NULL,NULL)){
@@ -212,7 +200,7 @@ int sig_unsigned_byte_array(const uint8_t *eth_unsigned_txn_byte_array,
       outtemp >>= 8;
       i++;
     }
-    printf("i  :%d", i);
+    //printf("i  :%d", i);
     int j=0;
     for(j = i-1; j >= 0; j--){
       finalOut[i-1-j+1] = lengthtemp[j];
@@ -220,13 +208,7 @@ int sig_unsigned_byte_array(const uint8_t *eth_unsigned_txn_byte_array,
     finalOut[0] = 0xf7 + i;
     memcpy(&finalOut[i+1], sig, outputlength);
     (*outputlen) += i+1;
-    printf("\noutput length:  %d", *outputlen);
-    printf("\n final:  ");
-		for(int i=0;i < *outputlen; i++){
-			printf("%.2x", finalOut[i]);
-		}
-		printf("\n");
-		
+    
     memset(sig,0x0,*outputlen);
     memcpy(sig, finalOut, *outputlen);
     return 0;

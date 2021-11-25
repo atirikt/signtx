@@ -25,15 +25,9 @@ int main(){
     uint8_t u_Byte[4096];
     uint32_t len;
     generate_bytearr_from_unsigned_struct(&intermediate, u_Byte, &len);
-    printf("\n output after byte conversion:");
-    for(int i = 0;i < len;i++){
-      printf("%.2x", u_Byte[i]);
-    }  
-    printf("\n");
-
+    
     uint8_t u_SigByte[4096] = {0};
     int outlength = 0;
-    printf("\nlength:  %d\n",len);
     sig_unsigned_byte_array(u_Byte, len, NULL,mnemonic,"", u_SigByte, &intermediate, &outlength);
     
     printf("\nsigned dump:  ");
