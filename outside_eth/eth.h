@@ -9,7 +9,6 @@
 #include <stdlib.h>
 #include <string.h>
 
-
 #include "../crypto/bip39.h"
 #include "../crypto/bip32.h"
 #include "../crypto/curves.h"
@@ -45,11 +44,13 @@ typedef struct
   uint8_t gas_limit_size[1];
   uint8_t gas_limit[32];
 
+  uint8_t addr_length[1];
   uint8_t to_address[20];
 
   uint8_t value_size[1];
   uint8_t value[32];
 
+  uint8_t payload_len_of_len;
   uint64_t payload_size;
   uint8_t *payload;
 

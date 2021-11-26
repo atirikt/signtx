@@ -16,7 +16,7 @@ INCLUDE=-I../ -I../crypto -I../crypto/chacha20poly1305
 vpath %.c $(SRC_DIR) $(SRC_DIR_3) $(SRC_DIR_4)
 
 signtx.out: libcr.so
-	gcc -o signtx.out -L. -lcr main.c 
+	gcc -o signtx.out -L. -lcr main.c
 
 libcr.so: $(OBJ_FILES) $(OBJ_FILES_2) $(OBJ_FILES_3) $(OBJ_FILES_4)
 	gcc -g -ggdb -fPIC -rdynamic -shared -o $@ $^
